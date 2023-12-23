@@ -61,7 +61,7 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String expressionString = expressions.get(3);
+        String expressionString = expressions.get(2);
         Lexemes lexemes = tokenizer.tokenize(expressionString);
         List<ParseError> errors = lexemes.getErrors();
         errors.addAll(analyzer.analyze(lexemes.getValues()));

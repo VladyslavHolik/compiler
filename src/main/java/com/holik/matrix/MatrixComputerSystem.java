@@ -69,38 +69,41 @@ public class MatrixComputerSystem {
     }
 
     public void parseTree(Expression expression) {
-        addExpressionsPerLevel(expression, 0);
+        addExpressionsPerLevel(expression);
     }
 
-    private void addExpressionsPerLevel(Expression expression, Integer expressionLevel) {
+    private void addExpressionsPerLevel(Expression expression) {
+        var expressionLevel = expression.getLevel();
         List<Expression> expressionsOnCurrentLevel = expressionsPerLevel.get(expressionLevel) == null ? new ArrayList<>() : expressionsPerLevel.get(expressionLevel);
         if (!(expression instanceof Constant || expression instanceof Variable)) {
             expressionsOnCurrentLevel.add(expression);
             expressionsPerLevel.put(expressionLevel, expressionsOnCurrentLevel);
 
-            expression.getChildren().forEach(child -> addExpressionsPerLevel(child, expressionLevel + 1));
+            expression.getChildren().forEach(this::addExpressionsPerLevel);
         } else {
             g.vertexSet().forEach(processor -> processor.getMemory().put(expression, true));
         }
     }
 
     public void emulateExecution() {
-        var expressionPerLevelSet = expressionsPerLevel.entrySet();
-        for (int level = expressionPerLevelSet.size() - 1; level >= 0; level--) {
-            var expressionOnLevel = expressionsPerLevel.get(level);
-            var expressionOnLevelPerType = expressionOnLevel.stream().collect(groupingBy(Expression::getNode)).entrySet().stream().toList();
-            for (int i = 0; i < expressionOnLevelPerType.size(); i++) {
-                var expressionsOnLevelPerTypeList = expressionOnLevelPerType.get(i);
-                while (!areAllOperationsCompleted(expressionsOnLevelPerTypeList.getValue())) {
-                    for (int j = 0; j < expressionsOnLevelPerTypeList.getValue().size(); j++) {
-                        if (!isOperationCompleted(expressionsOnLevelPerTypeList.getValue().get(j))) {
-                            executeOperation(expressionsOnLevelPerTypeList.getValue().get(j));
+        var expressionPerLevelSet = new ArrayList<>(expressionsPerLevel.entrySet().stream().toList());
+        expressionPerLevelSet.sort(Comparator.comparingInt(Map.Entry::getKey));
+        expressionPerLevelSet.forEach(expressionOnLevelEntry -> {
+                    var expressionOnLevel = expressionOnLevelEntry.getValue();
+                    var expressionOnLevelPerType = expressionOnLevel.stream().collect(groupingBy(Expression::getNode)).entrySet().stream().toList();
+                    for (int i = 0; i < expressionOnLevelPerType.size(); i++) {
+                        var expressionsOnLevelPerTypeList = expressionOnLevelPerType.get(i);
+                        while (!areAllOperationsCompleted(expressionsOnLevelPerTypeList.getValue())) {
+                            for (int j = 0; j < expressionsOnLevelPerTypeList.getValue().size(); j++) {
+                                if (!isOperationCompleted(expressionsOnLevelPerTypeList.getValue().get(j))) {
+                                    executeOperation(expressionsOnLevelPerTypeList.getValue().get(j));
+                                }
+                            }
+                            waitUntilProcessorsAvailable();
                         }
                     }
-                    waitUntilProcessorsAvailable();
                 }
-            }
-        }
+        );
     }
 
     private Boolean areAllOperationsCompleted(List<Expression> expressions) {
@@ -180,6 +183,7 @@ public class MatrixComputerSystem {
             runTact();
         }
     }
+
     public void waitUntilAtLeastOneProcessorAvailable() {
         while (g.vertexSet().stream().noneMatch(Processor::isAvailable)) {
             runTact();
