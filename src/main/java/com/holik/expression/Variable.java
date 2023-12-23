@@ -1,5 +1,6 @@
 package com.holik.expression;
 
+import com.holik.operation.Operation;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -47,5 +48,37 @@ public class Variable implements Expression {
     @Override
     public Integer getLevel() {
         return 1;
+    }
+
+    @Override
+    public Expression negateIfPossible() {
+        return this;
+    }
+
+    @Override
+    public Expression negate() {
+        return new Variable("-" + value);
+    }
+
+    @Override
+    public Expression divideIfPossible() {
+        return this;
+    }
+
+    @Override
+    public Expression divide() {
+        return new Binary(new Constant("1"), this, Operation.DIVISION);
+    }
+
+    @Override
+    public Expression paralelizeMultiplication() {
+        return this;
+    }
+
+    @Override
+    public List<Expression> getMultiplicationOperands() {
+        var operands = new ArrayList<Expression>();
+        operands.add(this);
+        return operands;
     }
 }

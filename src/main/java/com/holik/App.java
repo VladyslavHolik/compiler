@@ -33,10 +33,12 @@ public class App implements CommandLineRunner {
 
     private static final List<String> expressions = List.of(
             "a+b+c+d+e+f+g+h",
+            "i/1.0 + 0 - 0*k*h + 2 - 4.8/2 + 1*e/2",
             "a-b-c-d-e-f-g-h",
+            "a/b/c/d/e/f/g/h",
             "-(-(a))",
             "a+(b+c+d+(e+f)+g)+h",
-            "a-((b-c-d)-(e-f)-g)-h",
+            "a-((b-c-d)-(e-f)-g)-h-(1*2*3*4)",
             "-(-exp(3*et/4.0+.2, 21-1)/L+23)*((a*78)*f(78)) + ((i+1+1) + (1+1+i/(i-1-1))/k/1/1) +6.000+.500+.5",
             "A-B*c-J*(d*t*j-u*t+c*r-1+w-k/q+m*(n-k*s+z*(y+u*p-y/r-5)+x+t/2))/r+P",
             "a*b+a*c+b*c",
@@ -52,7 +54,7 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String expressionString = expressions.get(4);
+        String expressionString = expressions.get(0);
         Lexemes lexemes = tokenizer.tokenize(expressionString);
         List<ParseError> errors = lexemes.getErrors();
         errors.addAll(analyzer.analyze(lexemes.getValues()));
@@ -81,9 +83,14 @@ public class App implements CommandLineRunner {
                 printExpressionTree(expression);
             }
 
-            expression = expression.optimizeMinuses();
-            printExpressionTree(expression);
+            expression = expression.negateIfPossible();
             expression = expression.paralelizePluses();
+            expression = expression.divideIfPossible();
+            expression = expression.paralelizeMultiplication();
+            optimizedExpression = optimizer.optimize(expression);
+            if (optimizedExpression != null) {
+                expression = optimizedExpression;
+            }
             printExpressionTree(expression);
         }
     }

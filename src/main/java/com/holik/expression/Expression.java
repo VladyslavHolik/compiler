@@ -8,8 +8,23 @@ public interface Expression {
     List<Expression> getChildren();
 
     Expression optimize();
+
     Expression optimizeMinuses();
+
     Expression paralelizePluses();
+
     List<Expression> getPlusOperands();
+
     Integer getLevel();
+
+    Expression negateIfPossible();
+
+    Expression negate();
+
+    Expression divideIfPossible();
+
+    Expression divide();
+    Expression paralelizeMultiplication();
+
+    List<Expression> getMultiplicationOperands();
 }

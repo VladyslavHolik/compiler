@@ -62,4 +62,40 @@ public class Unary implements Expression {
     public Integer getLevel() {
         return 1 + expression.getLevel();
     }
+
+    @Override
+    public Expression negateIfPossible() {
+        if (operation.equals(Operation.SUBTRACTION)) {
+            return expression.negate();
+        }
+        return new Unary(expression.negateIfPossible(), operation);
+    }
+
+    @Override
+    public Expression negate() {
+        if (operation.equals(Operation.ADDITION)) {
+            return expression.negate();
+        }
+        return new Unary(expression, Operation.ADDITION).negateIfPossible();
+    }
+
+    @Override
+    public Expression divideIfPossible() {
+        return new Unary(expression.divideIfPossible(), operation);
+    }
+
+    @Override
+    public Expression divide() {
+        return new Binary(new Constant("1"), this.divideIfPossible(), Operation.DIVISION);
+    }
+
+    @Override
+    public Expression paralelizeMultiplication() {
+        return new Unary(expression.paralelizeMultiplication(), operation);
+    }
+
+    @Override
+    public List<Expression> getMultiplicationOperands() {
+        return new ArrayList<>(List.of(this));
+    }
 }

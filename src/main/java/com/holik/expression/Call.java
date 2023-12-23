@@ -79,4 +79,51 @@ public class Call implements Expression {
         }
         return maxLevel + 1;
     }
+
+    @Override
+    public Expression negateIfPossible() {
+        var optimizedArgs = new ArrayList<Expression>();
+        for (Expression arg : args) {
+            var optimizedArg = arg.negateIfPossible();
+            optimizedArgs.add(optimizedArg);
+        }
+        return new Call(optimizedArgs, function);
+    }
+
+    @Override
+    public Expression negate() {
+        return new Unary(this.negateIfPossible(), Operation.SUBTRACTION);
+    }
+
+    @Override
+    public Expression divideIfPossible() {
+        var optimizedArgs = new ArrayList<Expression>();
+        for (Expression arg : args) {
+            var optimizedArg = arg.divideIfPossible();
+            optimizedArgs.add(optimizedArg);
+        }
+        return new Call(optimizedArgs, function);
+    }
+
+    @Override
+    public Expression divide() {
+        return new Binary(new Constant("1"), this, Operation.DIVISION);
+    }
+
+    @Override
+    public Expression paralelizeMultiplication() {
+        var optimizedArgs = new ArrayList<Expression>();
+        for (Expression arg : args) {
+            var optimizedArg = arg.paralelizeMultiplication();
+            optimizedArgs.add(optimizedArg);
+        }
+        return new Call(optimizedArgs, function);
+    }
+
+    @Override
+    public List<Expression> getMultiplicationOperands() {
+        var operands = new ArrayList<Expression>();
+        operands.add(this);
+        return operands;
+    }
 }
