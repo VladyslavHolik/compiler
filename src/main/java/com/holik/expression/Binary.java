@@ -14,6 +14,7 @@ public class Binary implements Expression {
     private final Operation operation;
 
 
+
     @Override
     public String getNode() {
         return operation.getOperator();
@@ -168,10 +169,10 @@ public class Binary implements Expression {
                     operands = newOperandsList;
                 }
             }
-            return new Binary(operands.get(0).paralelizePluses(), operands.get(1).paralelizePluses(), Operation.MULTIPLICATION);
+            return new Binary(operands.get(0).paralelizeMultiplication(), operands.get(1).paralelizeMultiplication(), Operation.MULTIPLICATION);
 
         }
-        return new Binary(x.paralelizePluses(), y.paralelizePluses(), operation);
+        return new Binary(x.paralelizeMultiplication(), y.paralelizeMultiplication(), operation);
     }
 
     @Override
@@ -184,5 +185,10 @@ public class Binary implements Expression {
         }
         operands.add(this);
         return operands;
+    }
+
+    @Override
+    public String toString() {
+        return operation.getOperator() + "[" + x.toString() + "," + y.toString() + "]";
     }
 }

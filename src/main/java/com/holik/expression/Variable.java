@@ -81,4 +81,9 @@ public class Variable implements Expression {
         operands.add(this);
         return operands;
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

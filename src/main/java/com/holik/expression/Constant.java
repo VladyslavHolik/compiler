@@ -79,4 +79,9 @@ public class Constant implements Expression {
         operands.add(this);
         return operands;
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

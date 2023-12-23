@@ -2,6 +2,7 @@ package com.holik;
 
 import com.holik.analyzer.Analyzer;
 import com.holik.expression.Expression;
+import com.holik.matrix.MatrixComputerSystem;
 import com.holik.optimizer.Optimizer;
 import com.holik.parser.Parser;
 import com.holik.tokenizer.Lexemes;
@@ -31,8 +32,14 @@ public class App implements CommandLineRunner {
     @Autowired
     private Optimizer optimizer;
 
+    @Autowired
+    private MatrixComputerSystem matrixComputerSystem;
+
     private static final List<String> expressions = List.of(
-            "a+b+c+d+e+f+g+h",
+            "a+b+c+d+e+f+g+h+k+l+m+n",
+            "1+2+3+4+5+6+7+8",
+            "1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16",
+            "1+2+3-4+5+6-7+(8+9+10)+(12+13)*2*3*5*5",
             "i/1.0 + 0 - 0*k*h + 2 - 4.8/2 + 1*e/2",
             "a-b-c-d-e-f-g-h",
             "a/b/c/d/e/f/g/h",
@@ -54,7 +61,7 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String expressionString = expressions.get(0);
+        String expressionString = expressions.get(3);
         Lexemes lexemes = tokenizer.tokenize(expressionString);
         List<ParseError> errors = lexemes.getErrors();
         errors.addAll(analyzer.analyze(lexemes.getValues()));
@@ -92,6 +99,10 @@ public class App implements CommandLineRunner {
                 expression = optimizedExpression;
             }
             printExpressionTree(expression);
+
+            matrixComputerSystem.parseTree(expression);
+            matrixComputerSystem.emulateExecution();
+            matrixComputerSystem.printDiagram();
         }
     }
 
