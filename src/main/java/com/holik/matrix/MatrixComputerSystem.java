@@ -4,7 +4,6 @@ import com.holik.expression.Constant;
 import com.holik.expression.Expression;
 import com.holik.expression.Variable;
 import de.vandermeer.asciitable.AsciiTable;
-import org.checkerframework.checker.units.qual.A;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.interfaces.ShortestPathAlgorithm;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
@@ -192,7 +191,7 @@ public class MatrixComputerSystem {
 
     public Integer getOperationCost(Expression expression) {
         if (expression.getNode().equals("+")) {
-            return 1;
+            return 2;
         } else if (expression.getNode().equals("-")) {
             return 2;
         } else if (expression.getNode().equals("*")) {
@@ -227,6 +226,32 @@ public class MatrixComputerSystem {
 
         String rend = at.render();
         System.out.println(rend);
-        System.out.println("Quantity of tacts: " + processors.get(0).getOperationPerTact().size());
+        var systemTacts = processors.get(0).getOperationPerTact().size();
+        System.out.println("Quantity of tacts: " + systemTacts);
+        System.out.println("Acceleration coefficient: " + ((double) getTotalTactsOnOneProcessor()) / systemTacts);
+        System.out.println("Efficiency coefficient: " + getEfficiencyCoefficient(processors));
+    }
+
+    private Integer getTotalTactsOnOneProcessor() {
+        AtomicReference<Integer> totalTacts = new AtomicReference<>(0);
+        expressionsPerLevel.forEach((level, expressions) ->
+                expressions.stream()
+                        .filter(e -> "+-*/".contains(e.getNode()))
+                        .forEach(e -> totalTacts.updateAndGet(v -> v + getOperationCost(e)))
+        );
+        return totalTacts.get();
+    }
+
+    private Double getEfficiencyCoefficient(List<Processor> processors) {
+        var tactsWorking = 0;
+        var totalTactsOnAllProcessors = processors.get(0).getOperationPerTact().size() * processors.size();
+        for (Processor processor : processors) {
+            for (String operation : processor.getOperationPerTact()) {
+                if (!operation.isBlank() && (!operation.contains("R") && !operation.contains("W"))) {
+                    tactsWorking++;
+                }
+            }
+        }
+        return ((double) tactsWorking) / totalTactsOnAllProcessors;
     }
 }
