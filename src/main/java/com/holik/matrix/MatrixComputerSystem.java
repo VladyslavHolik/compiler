@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.groupingBy;
 public class MatrixComputerSystem {
     private Graph<Processor, DefaultEdge> g;
     private Map<Integer, List<Expression>> expressionsPerLevel = new HashMap<>();
+    private Map<String, Integer> functionCosts;
 
     public MatrixComputerSystem() {
         g = new DefaultUndirectedGraph<>(DefaultEdge.class);
@@ -67,8 +68,9 @@ public class MatrixComputerSystem {
         return cPaths.getPath(processorB).getLength();
     }
 
-    public void parseTree(Expression expression) {
+    public void parseTree(Expression expression, Map<String, Integer> functionCosts) {
         addExpressionsPerLevel(expression);
+        this.functionCosts = functionCosts;
     }
 
     private void addExpressionsPerLevel(Expression expression) {
@@ -198,6 +200,8 @@ public class MatrixComputerSystem {
             return 3;
         } else if (expression.getNode().equals("/")) {
             return 4;
+        } else if (functionCosts.containsKey(expression.getNode())) {
+            return functionCosts.get(expression.getNode());
         }
         throw new RuntimeException("Cannot get cost for expression: " + expression);
     }
@@ -235,9 +239,7 @@ public class MatrixComputerSystem {
     private Integer getTotalTactsOnOneProcessor() {
         AtomicReference<Integer> totalTacts = new AtomicReference<>(0);
         expressionsPerLevel.forEach((level, expressions) ->
-                expressions.stream()
-                        .filter(e -> "+-*/".contains(e.getNode()))
-                        .forEach(e -> totalTacts.updateAndGet(v -> v + getOperationCost(e)))
+                expressions.forEach(e -> totalTacts.updateAndGet(v -> v + getOperationCost(e)))
         );
         return totalTacts.get();
     }

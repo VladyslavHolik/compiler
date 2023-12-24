@@ -126,4 +126,14 @@ public class Call implements Expression {
         operands.add(this);
         return operands;
     }
+
+    @Override
+    public List<String> getFunctions() {
+        var functions = new ArrayList<String>();
+        functions.add(function);
+        for (Expression arg : args) {
+            functions.addAll(arg.getFunctions());
+        }
+        return functions;
+    }
 }

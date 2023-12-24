@@ -27,4 +27,5 @@ public interface Expression {
     Expression paralelizeMultiplication();
 
     List<Expression> getMultiplicationOperands();
+    List<String> getFunctions();
 }

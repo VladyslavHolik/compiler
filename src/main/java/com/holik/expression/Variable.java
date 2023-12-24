@@ -86,4 +86,9 @@ public class Variable implements Expression {
     public String toString() {
         return value;
     }
+
+    @Override
+    public List<String> getFunctions() {
+        return new ArrayList<>();
+    }
 }

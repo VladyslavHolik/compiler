@@ -98,4 +98,9 @@ public class Unary implements Expression {
     public List<Expression> getMultiplicationOperands() {
         return new ArrayList<>(List.of(this));
     }
+
+    @Override
+    public List<String> getFunctions() {
+        return new ArrayList<>(expression.getFunctions());
+    }
 }

@@ -14,7 +14,6 @@ public class Binary implements Expression {
     private final Operation operation;
 
 
-
     @Override
     public String getNode() {
         return operation.getOperator();
@@ -185,6 +184,14 @@ public class Binary implements Expression {
         }
         operands.add(this);
         return operands;
+    }
+
+    @Override
+    public List<String> getFunctions() {
+        var functions = new ArrayList<String>();
+        functions.addAll(x.getFunctions());
+        functions.addAll(y.getFunctions());
+        return functions;
     }
 
     @Override

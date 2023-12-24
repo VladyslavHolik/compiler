@@ -17,6 +17,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 @SpringBootApplication
 public class App implements CommandLineRunner {
@@ -36,8 +38,9 @@ public class App implements CommandLineRunner {
     private MatrixComputerSystem matrixComputerSystem;
 
     private static final List<String> expressions = List.of(
+            "a(1,2,3) + 1+2+3 + b(3,5) + f(1)",
             "a+b+c+d+e+f+g+h+k+l+m+n",
-            "1+2+3+4+5+6+7+8",
+            "1+2+3+4+5+6+7+8+4*5*6*7*8*9*10*11+9/10/11/12/13/14/15/16",
             "1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16",
             "1+2+3-4+5+6-7+(8+9+10)+(12+13)*2*3*5*5",
             "i/1.0 + 0 - 0*k*h + 2 - 4.8/2 + 1*e/2",
@@ -61,7 +64,7 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String expressionString = expressions.get(2);
+        String expressionString = expressions.get(0);
         Lexemes lexemes = tokenizer.tokenize(expressionString);
         List<ParseError> errors = lexemes.getErrors();
         errors.addAll(analyzer.analyze(lexemes.getValues()));
@@ -99,11 +102,24 @@ public class App implements CommandLineRunner {
                 expression = optimizedExpression;
             }
             printExpressionTree(expression);
+            List<String> functions = expression.getFunctions();
+            Map<String, Integer> functionCosts = askFunctionCosts(functions);
 
-            matrixComputerSystem.parseTree(expression);
+            matrixComputerSystem.parseTree(expression, functionCosts);
             matrixComputerSystem.emulateExecution();
             matrixComputerSystem.printDiagram();
         }
+    }
+
+    private Map<String, Integer> askFunctionCosts(List<String> functions) {
+        Map<String, Integer> functionCosts = new HashMap<>();
+        Scanner scanner = new Scanner(System.in);
+        for (String function : functions) {
+            System.out.println("Enter function '" + function + "' cost: ");
+            String cost = scanner.nextLine();
+            functionCosts.put(function, Integer.parseInt(cost));
+        }
+        return functionCosts;
     }
 
     public void printErrors(List<ParseError> errors, String expression) {
