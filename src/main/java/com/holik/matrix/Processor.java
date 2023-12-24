@@ -1,6 +1,9 @@
 package com.holik.matrix;
 
+import com.holik.App;
 import com.holik.expression.Expression;
+import hu.webarticum.treeprinter.SimpleTreeNode;
+import hu.webarticum.treeprinter.printer.traditional.TraditionalTreePrinter;
 import lombok.Getter;
 import lombok.Setter;
 

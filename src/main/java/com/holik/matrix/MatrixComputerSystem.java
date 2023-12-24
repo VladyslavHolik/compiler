@@ -1,5 +1,6 @@
 package com.holik.matrix;
 
+import com.google.common.collect.Lists;
 import com.holik.expression.Constant;
 import com.holik.expression.Expression;
 import com.holik.expression.Variable;
@@ -16,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.stream.Collectors.groupingBy;
 
-@Component
 public class MatrixComputerSystem {
     private Graph<Processor, DefaultEdge> g;
     private Map<Integer, List<Expression>> expressionsPerLevel = new HashMap<>();
@@ -93,86 +93,87 @@ public class MatrixComputerSystem {
                     var expressionOnLevel = expressionOnLevelEntry.getValue();
                     var expressionOnLevelPerType = expressionOnLevel.stream().collect(groupingBy(Expression::getNode)).entrySet().stream().toList();
                     for (int i = 0; i < expressionOnLevelPerType.size(); i++) {
-                        var expressionsOnLevelPerTypeList = expressionOnLevelPerType.get(i);
-                        while (!areAllOperationsCompleted(expressionsOnLevelPerTypeList.getValue())) {
-                            for (int j = 0; j < expressionsOnLevelPerTypeList.getValue().size(); j++) {
-                                if (!isOperationCompleted(expressionsOnLevelPerTypeList.getValue().get(j))) {
-                                    executeOperation(expressionsOnLevelPerTypeList.getValue().get(j));
-                                }
-                            }
-                            waitUntilProcessorsAvailable();
+                        var expressionsOnLevelPerTypeList = expressionOnLevelPerType.get(i).getValue();
+                        var partitions = Lists.partition(expressionsOnLevelPerTypeList, getProcessors().size());
+                        for (List<Expression> partition : partitions) {
+                            run(partition);
                         }
                     }
                 }
         );
     }
 
-    private Boolean areAllOperationsCompleted(List<Expression> expressions) {
+    private void run(List<Expression> expressions) {
+        expressions.sort(Comparator.comparingInt(e -> -e.getChildren().size()));
+        Map<Processor, Expression> processorExpressionMap = new HashMap<>();
+        Map<Expression, Processor> expressionProcessorMap = new HashMap<>();
         for (Expression expression : expressions) {
-            if (!isOperationCompleted(expression)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private Boolean isOperationCompleted(Expression expression) {
-        return g.vertexSet().stream().anyMatch(processor -> processor.getMemory().containsKey(expression));
-    }
-
-    public void executeOperation(Expression expression) {
-        var processorToExecuteOpt = g.vertexSet().stream().filter(processor -> {
-            for (Expression child : expression.getChildren()) {
-                if (!processor.getMemory().containsKey(child)) {
-                    return false;
+            var processorToExecuteExpression = getProcessors().stream().sorted(Comparator.comparingInt(p -> {
+                var quantityOfChildrenPresent = 0;
+                for (Expression child : expression.getChildren()) {
+                    if (p.getMemory().containsKey(child)) {
+                        quantityOfChildrenPresent++;
+                    }
                 }
-            }
-            return processor.isAvailable();
-        }).findFirst();
-        if (processorToExecuteOpt.isPresent()) {
-            processorToExecuteOpt.get().assignOperation(expression, getOperationCost(expression));
-        } else {
-            var processorThatAlreadyHasAllDataButIsUnavailable = g.vertexSet().stream().filter(processor -> {
+                return -quantityOfChildrenPresent;
+            })).filter(p -> !processorExpressionMap.containsKey(p)).findFirst().get();
+
+            processorExpressionMap.put(processorToExecuteExpression, expression);
+            expressionProcessorMap.put(expression, processorToExecuteExpression);
+        }
+
+        // transferring children
+        while (!areAllExpressionsReadyToExecute(expressions, expressionProcessorMap)) {
+            for (Expression expression : expressions) {
+                var processor = expressionProcessorMap.get(expression);
+                var childThatAreNotPresentOnMainProcessor = new ArrayList<Expression>();
                 for (Expression child : expression.getChildren()) {
                     if (!processor.getMemory().containsKey(child)) {
-                        return false;
+                        childThatAreNotPresentOnMainProcessor.add(child);
                     }
                 }
-                return true;
-            }).findFirst();
-            if (processorThatAlreadyHasAllDataButIsUnavailable.isPresent()) {
-                return;
-            }
-            processorToExecuteOpt = g.vertexSet().stream().filter(processor -> {
-                var containsAtLeastOneChild = false;
-                for (Expression child : expression.getChildren()) {
-                    if (processor.getMemory().containsKey(child)) {
-                        containsAtLeastOneChild = true;
-                        break;
-                    }
+
+                for (Expression childToTransfer : childThatAreNotPresentOnMainProcessor) {
+                    var processorWithChild = getProcessors().stream().filter(Processor::isAvailable).filter(p -> p.getMemory().containsKey(childToTransfer)).findFirst();
+                    processorWithChild.ifPresent(pWithChild -> {
+                        if (processor.isAvailable()) {
+                            var tacts = shortestPathLength(processor, pWithChild);
+                            processor.assignReadOperation(childToTransfer, pWithChild, tacts);
+                            pWithChild.assignWriteOperation(processor, childToTransfer, tacts);
+                        }
+                    });
                 }
-                return processor.isAvailable() && containsAtLeastOneChild;
-            }).findFirst();
-            if (processorToExecuteOpt.isEmpty()) {
-                return;
             }
-            var processorToExecute = processorToExecuteOpt.get();
-            var unfoundChildOpt = expression.getChildren().stream().filter(child -> !processorToExecute.getMemory().containsKey(child)).findFirst();
-            if (unfoundChildOpt.isEmpty()) {
-                processorToExecute.assignOperation(expression, getOperationCost(expression));
-                return;
-            } else {
-                var unfoundChild = unfoundChildOpt.get();
-                var processorWithChild = g.vertexSet().stream().filter(processor -> processor.getMemory().containsKey(unfoundChild) && processor.isAvailable()).findFirst();
-                while (processorWithChild.isEmpty()) {
-                    runTact();
-                    processorWithChild = g.vertexSet().stream().filter(processor -> processor.getMemory().containsKey(unfoundChild) && processor.isAvailable()).findFirst();
-                }
-                var tacts = shortestPathLength(processorToExecute, processorWithChild.get());
-                processorToExecute.assignReadOperation(unfoundChild, processorWithChild.get(), tacts);
-                processorWithChild.get().assignWriteOperation(processorToExecute, unfoundChild, tacts);
+            if (!areAllExpressionsReadyToExecute(expressions, expressionProcessorMap)) {
+                runTact();
             }
         }
+
+        // starting execution
+        for (Expression expression : expressions) {
+            var processor = expressionProcessorMap.get(expression);
+            processor.assignOperation(expression, getOperationCost(expression));
+        }
+
+        waitUntilProcessorsAvailable();
+    }
+
+    private Boolean areAllExpressionsReadyToExecute(List<Expression> expressions, Map<Expression, Processor> expressionProcessorMap) {
+        var areAllExpressionsReadeToExecute = true;
+        for (Expression expression : expressions) {
+            var processor = expressionProcessorMap.get(expression);
+            for (Expression child : expression.getChildren()) {
+                if (!processor.getMemory().containsKey(child)) {
+                    areAllExpressionsReadeToExecute = false;
+                    break;
+                }
+            }
+        }
+        return areAllExpressionsReadeToExecute;
+    }
+
+    private List<Processor> getProcessors() {
+        return new ArrayList<>(g.vertexSet().stream().toList());
     }
 
     public void runTact() {
@@ -184,22 +185,15 @@ public class MatrixComputerSystem {
             runTact();
         }
     }
-
-    public void waitUntilAtLeastOneProcessorAvailable() {
-        while (g.vertexSet().stream().noneMatch(Processor::isAvailable)) {
-            runTact();
-        }
-    }
-
     public Integer getOperationCost(Expression expression) {
         if (expression.getNode().equals("+")) {
-            return 2;
+            return 1;
         } else if (expression.getNode().equals("-")) {
             return 2;
         } else if (expression.getNode().equals("*")) {
-            return 3;
+            return 5;
         } else if (expression.getNode().equals("/")) {
-            return 4;
+            return 8;
         } else if (functionCosts.containsKey(expression.getNode())) {
             return functionCosts.get(expression.getNode());
         }
@@ -213,12 +207,14 @@ public class MatrixComputerSystem {
 
         at.addRule();
         var header = new ArrayList<String>();
+        header.add("Index");
         processors.forEach(processor -> header.add(processor.getName()));
         at.addRow(header);
 
         for (int i = 0; i < processors.get(0).getOperationPerTact().size(); i++) {
             at.addRule();
             var tactOperations = new ArrayList<String>();
+            tactOperations.add(String.valueOf(i));
             for (int j = 0; j < processors.size(); j++) {
                 var processor = processors.get(j);
                 tactOperations.add(processor.getOperationPerTact().get(i));
@@ -234,6 +230,15 @@ public class MatrixComputerSystem {
         System.out.println("Quantity of tacts: " + systemTacts);
         System.out.println("Acceleration coefficient: " + ((double) getTotalTactsOnOneProcessor()) / systemTacts);
         System.out.println("Efficiency coefficient: " + getEfficiencyCoefficient(processors));
+    }
+
+    public List<Double> getExecutionStats() {
+        List<Double> stats = new ArrayList<>();
+        var systemTacts = getProcessors().get(0).getOperationPerTact().size();
+        stats.add((double) systemTacts);
+        stats.add(((double) getTotalTactsOnOneProcessor()) / systemTacts);
+        stats.add(getEfficiencyCoefficient(getProcessors()));
+        return stats;
     }
 
     private Integer getTotalTactsOnOneProcessor() {
