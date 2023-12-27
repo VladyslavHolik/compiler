@@ -33,6 +33,7 @@ public class App implements CommandLineRunner {
     private Optimizer optimizer;
 
     private static final List<String> expressions = List.of(
+            "a-b*k+b*t+1*2*3*4*5*6*7*0-b*f*f*5.9+b*f*q+b*g*f*5.9-b*g*q-b*w/p+b*y*m/p-b*y/p-x*x/(d+q-w)+3*x/(d+q-w)+3*x/(d+q-w)+3*3/(d+q-w)",
             "1+2+3+4+(5+6+7)+8+4*5*6*(7*8*9)*10*11+9/10/11/12/13/14/15/16 + 1*2*3*4*5*0",
             "1+2+3+(4+5+6+7+8)+9+10+11+12+13+14+15+16",
             "a-b-c-d-e-f-g-h-1-2-3-4-5-6-7-8",
